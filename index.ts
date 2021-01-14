@@ -135,7 +135,7 @@ const take = (n: number, $: State[]): State[] => {
       return [pull($)[0]];
     } else {
       const p$: PullResult = pull($)
-      // @ts-ignore - ignoring the type def for p$[1]
+      // @ts-ignore
       return [p$[0], ...take(n-1, p$[1])];
     }
 }
