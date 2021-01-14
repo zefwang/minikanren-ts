@@ -10,7 +10,7 @@ type Pair = [Term, Term]; // (cons term term)
 type Term = Var | Symbol | Bool | Empty | Pair;
 
 type Procedure = () => void;
-type PullResult = [State, State[] | Procedure] | State[];
+type PullResult = State[] | [State, Procedure];
 
 // Goal is function that takes in state and returns List-of State
 type Goal = (input: State) => State[];
