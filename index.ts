@@ -9,6 +9,9 @@ type Empty = [];
 type Pair = [Term, Term]; // (cons term term)
 type Term = Var | Symbol | Bool | Empty | Pair;
 
+type Procedure = () => void;
+type PullResult = [State, State[] | Procedure] | State[];
+
 // Goal is function that takes in state and returns List-of State
 type Goal = (input: State) => State[];
 type State = [Substitution, number];
@@ -65,7 +68,7 @@ const ext_s = (v: Var, t: Term, sub: Substitution): Maybe<Substitution> => {
 }
 
 // Takes two terms and returns sustitution showing how to make terms equal
-const unify = (t1: Term, t2: Term, sub: Substitution): Maybe<Substitution> {
+const unify = (t1: Term, t2: Term, sub: Substitution): Maybe<Substitution> => {
   if (t1 === t2) {
     return sub;
   } else if (isVar(t1)) {
@@ -80,4 +83,67 @@ const unify = (t1: Term, t2: Term, sub: Substitution): Maybe<Substitution> {
   }
 }
 
-// TODO: Equality, Call-Fresh, Conj, Disj
+// Two terms -> Goal
+const equality = (t1: Term, t2: Term): Goal => {
+  return (input: State): State[] => {
+    const sub: Substitution = input[0];
+    const newSub: Maybe<Substitution> = unify(walk(t1, sub), walk(t2, sub), sub);
+
+    if (newSub) {
+      return [[newSub, input[1]]];
+    } else {
+      return [];
+    }
+  }
+}
+
+// Function f (eats variable) -> Goal
+const callFresh = (f: (aVar: Var) => Goal): Goal => {
+  return (input: State): State[] => {
+    return f(input[1])([input[0], input[1]+1]);
+  }
+}
+
+// Two goals -> Goal
+const disjunction = (g1: Goal, g2: Goal): Goal => {
+  return (input: State): State[] => {
+    return [...g1(input), ...g2(input)] // Append two goals together
+  }
+}
+
+const conjunction = (g1: Goal, g2: Goal): Goal => {
+  return (input: State): State[] => {
+    return g1(input).reduce((previousValue: State[], nextState: State): State[] => {
+      return previousValue.concat(g2(nextState))
+    }, []);
+  }
+}
+
+/* Stuff I'm really unsure about */
+const run = (n: number, g: Goal): Goal => {
+  return (input: State): State[] => {
+    return take(n, g([[], 0]))
+  }
+}
+
+const take = (n: number, $: State[]): State[] => {
+    if (n === 0) {
+      return [];
+    } else if ($.length === 0) {
+      return [];
+    } else if (n === 1) {
+      return [pull($)[0]];
+    } else {
+      const p$: PullResult = pull($)
+      // @ts-ignore - ignoring the type def for p$[1]
+      return [p$[0], ...take(n-1, p$[1])];
+    }
+}
+
+const pull = ($: State[]): PullResult => {
+  if (typeof $ === 'function') {
+    return pull($)
+  } else {
+    return $;
+  }
+}
